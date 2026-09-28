@@ -1,0 +1,10 @@
+# Ignorar banco de dados local
+*.db
+samba_audit.db
+
+# Ignorar arquivos de cache do Python
+__pycache__/
+*.pyc
+
+# Ignorar logs
+*.log
