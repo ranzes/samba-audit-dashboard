@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Samba Audit - Tamar Works</title>
+    <title>Samba Audit</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -29,10 +29,18 @@
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden text-gray-800 font-sans">
 
+    <!-- Tela de Carregamento Real (Apenas F5/Abertura) -->
+    <div id="loader" class="fixed inset-0 bg-[#0B1220] z-[9999] flex flex-col justify-center items-center transition-opacity duration-500">
+        <div class="w-16 h-16 border-4 border-slate-700 border-t-[#38BDF8] rounded-full animate-spin mb-4"></div>
+        <h2 class="text-[#E2E8F0] font-mono text-xl font-bold">Carregando Samba Audit...</h2>
+    </div>
+
     <!-- Sidebar -->
     <aside id="sidebar" class="w-64 bg-gray-900 text-white flex flex-col shadow-2xl z-20">
-        <div class="h-16 flex items-center px-6 border-b border-gray-800">
-            <h1 class="text-xl font-bold tracking-wider text-blue-400">🛡️ SambaAudit</h1>
+        <div class="h-20 flex items-center px-4 border-b border-gray-800">
+            <h1 class="text-xl font-bold tracking-wider text-blue-400 flex items-center">
+                <img src="/static/logo.svg" alt="Shield Logo" class="h-14 w-14 mr-3"> Samba Audit
+            </h1>
         </div>
         <nav id="tabs-nav" class="flex-1 px-4 py-6 space-y-2">
             <button onclick="switchTab('dashboard')" id="btn-dashboard" class="w-full flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg transition-colors">
@@ -54,10 +62,9 @@
     <main class="flex-1 flex flex-col h-screen overflow-hidden">
         
         <!-- Headerbar -->
-        <header id="header" class="h-16 bg-white shadow-sm flex items-center justify-between px-8 z-10">
+        <header id="header" class="h-20 bg-white shadow-sm flex items-center justify-between px-8 z-10">
             <h2 id="page-title" class="text-xl font-semibold text-gray-700">Dashboard em Tempo Real</h2>
             <div class="flex items-center text-sm text-gray-500">
-                <img src="/static/Logo-final-3.png" alt="Tamar Works" class="h-6 mr-4 opacity-50 grayscale hover:grayscale-0 transition">
                 <span class="relative flex h-3 w-3 mr-2">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
@@ -67,7 +74,7 @@
         </header>
 
         <!-- DASHBOARD VIEW -->
-        <div id="view-dashboard" class="flex-1 overflow-y-auto p-8">
+        <div id="view-dashboard" class="flex-1 overflow-y-auto p-8 hidden">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                     <h3 class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-4">🏆 Top Usuários</h3>
@@ -78,7 +85,7 @@
                     <div class="relative h-64"><canvas id="chartFiles"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="text-red-500 text-sm font-semibold uppercase tracking-wider mb-4">🗑️ Maiores Exclusões</h3>
+                    <h3 class="text-red-500 text-sm font-semibold uppercase tracking-wider mb-4">🗑 Maiores Exclusões</h3>
                     <div class="relative h-64"><canvas id="chartDeletes"></canvas></div>
                 </div>
             </div>
@@ -106,17 +113,16 @@
         <!-- HISTORY VIEW -->
         <div id="view-history" class="flex-1 overflow-y-auto p-8 hidden">
             
-            <!-- Cabeçalho visível apenas no PDF -->
             <div class="print-header">
-                <img src="/static/Logo-final-3.png" style="height: 50px; margin: 0 auto 10px auto;">
+                <img src="/static/Logo-final-3.png" style="height: 60px; margin: 0 auto 10px auto;">
                 <h2>Relatório de Auditoria de Acessos</h2>
-                <p>Gerado pelo sistema SambaAudit - Tamar Works</p>
+                <p>Gerado pelo sistema Samba Audit</p>
                 <hr style="margin: 15px 0;">
             </div>
 
             <!-- Search Form -->
             <div id="search-card" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
-                <form id="searchForm" class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4 items-end" onsubmit="event.preventDefault(); loadHistory();">
+                <form id="searchForm" class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4 items-end" onsubmit="event.preventDefault(); switchTab('history');">
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Data Início</label>
                         <input type="date" id="date_from" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500">
@@ -141,7 +147,6 @@
                         <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-2 text-sm transition-colors shadow-lg shadow-blue-500/30" title="Buscar">
                             Buscar
                         </button>
-                        <!-- Botão de Gerar PDF -->
                         <button type="button" onclick="window.print()" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-medium rounded-lg px-3 py-2 text-sm transition-colors shadow-lg flex justify-center items-center" title="Imprimir / Salvar PDF">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                         </button>
@@ -170,12 +175,39 @@
 
         <!-- ABOUT VIEW -->
         <div id="view-about" class="flex-1 overflow-y-auto p-8 hidden flex items-center justify-center bg-gray-50">
-            <div class="bg-white p-10 rounded-2xl shadow-xl border border-gray-100 max-w-lg text-center">
-                <img src="/static/Logo-final-3.png" alt="Tamar Works" class="h-24 mx-auto mb-4">
-                <p class="text-sm text-gray-500 italic mb-6">Conectando pessoas, tecnologia e resultados.</p>
-                <a href="https://tamarworks.com.br" target="_blank" class="text-blue-600 font-semibold hover:underline mb-8 block">tamarworks.com.br</a>
+            <div class="bg-white p-10 rounded-2xl shadow-xl border border-gray-100 max-w-lg text-center w-full">
                 
-                <hr class="border-gray-200 mb-8">
+                <img src="/static/Logo-final-3.png" alt="Tamar Works" class="h-40 mx-auto mb-2 relative z-20">
+                
+                <!-- Container da Animação do Link/Lema Tamar Works -->
+                <div class="group relative flex flex-col items-center justify-start h-16 mb-2 mt-2">
+                    <a href="https://tamarworks.com.br" target="_blank" class="text-blue-600 text-lg font-semibold hover:underline relative z-10 bg-white px-3 py-1">
+                        tamarworks.com.br
+                    </a>
+                    <p class="text-sm text-gray-500 italic absolute top-6 opacity-0 transform -translate-y-5 group-hover:translate-y-3 group-hover:opacity-100 transition-all duration-300 ease-out z-0 whitespace-nowrap">
+                        Conectando pessoas, tecnologia e resultados.
+                    </p>
+                </div>
+
+                <!-- NOVA Animação do GitHub (Hitbox grande que abrange a animação horizontal) -->
+                <div class="flex justify-center mb-6">
+                    <a href="https://github.com/ranzes/samba-audit-dashboard" target="_blank" class="group relative flex items-center justify-center w-64 h-16 cursor-pointer" title="Acessar Repositório">
+                        
+                        <!-- Texto que desliza para a direita -->
+                        <span class="absolute font-semibold text-gray-700 whitespace-nowrap opacity-0 transform -translate-x-12 group-hover:translate-x-8 group-hover:opacity-100 transition-all duration-300 ease-out z-0">
+                            Repositório SRD
+                        </span>
+                        
+                        <!-- Logo GitHub que desliza para a esquerda -->
+                        <div class="absolute z-10 bg-white rounded-full text-gray-800 group-hover:text-black transform translate-x-0 group-hover:-translate-x-16 transition-all duration-300 ease-out flex items-center justify-center">
+                            <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                    </a>
+                </div>
+                
+                <hr class="border-gray-200 mb-8 mt-2">
                 
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">Ranzes Tamar</h2>
                 <div class="text-gray-600 space-y-2 text-sm">
@@ -234,69 +266,88 @@
         }
 
         async function loadDashboard() {
-            const res = await fetch('/api/dashboard');
-            const data = await res.json();
-            
-            initChart('chartUsers', 'bar', data.top_users.map(u => ({label: u.user, val: u.count})), '#3b82f6');
-            initChart('chartFiles', 'doughnut', data.top_files.map(f => ({label: f.file.substring(0,20), val: f.count})), ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899']);
-            initChart('chartDeletes', 'bar', data.top_deletes.map(u => ({label: u.user, val: u.count})), '#ef4444');
+            try {
+                const res = await fetch('/api/dashboard');
+                const data = await res.json();
+                
+                initChart('chartUsers', 'bar', data.top_users.map(u => ({label: u.user, val: u.count})), '#3b82f6');
+                initChart('chartFiles', 'doughnut', data.top_files.map(f => ({label: f.file.substring(0,20), val: f.count})), ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899']);
+                initChart('chartDeletes', 'bar', data.top_deletes.map(u => ({label: u.user, val: u.count})), '#ef4444');
 
-            const logsRes = await fetch('/api/logs?limit=15');
-            const logs = await logsRes.json();
-            document.getElementById('liveTable').innerHTML = logs.map(l => `
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${l.timestamp.replace('T', ' ')}</td>
-                    <td class="px-4 py-3 font-medium text-gray-700">${l.user}</td>
-                    <td class="px-4 py-3">${formatOp(l.op)}</td>
-                    <td class="px-4 py-3 text-gray-600 break-path font-mono text-xs">${l.file}</td>
-                </tr>
-            `).join('');
+                const logsRes = await fetch('/api/logs?limit=15');
+                const logs = await logsRes.json();
+                document.getElementById('liveTable').innerHTML = logs.map(l => `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${l.timestamp.replace('T', ' ')}</td>
+                        <td class="px-4 py-3 font-medium text-gray-700">${l.user}</td>
+                        <td class="px-4 py-3">${formatOp(l.op)}</td>
+                        <td class="px-4 py-3 text-gray-600 break-path font-mono text-xs">${l.file}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Erro ao carregar Dashboard:", err);
+            }
         }
 
         async function loadHistory() {
-            const params = new URLSearchParams({
-                date_from: document.getElementById('date_from').value,
-                date_to: document.getElementById('date_to').value,
-                user: document.getElementById('s_user').value,
-                ip: document.getElementById('s_ip').value,
-                file: document.getElementById('s_file').value,
-                limit: 500
-            });
+            try {
+                const params = new URLSearchParams({
+                    date_from: document.getElementById('date_from').value,
+                    date_to: document.getElementById('date_to').value,
+                    user: document.getElementById('s_user').value,
+                    ip: document.getElementById('s_ip').value,
+                    file: document.getElementById('s_file').value,
+                    limit: 500
+                });
 
-            const res = await fetch(`/api/logs?${params.toString()}`);
-            const logs = await res.json();
-            
-            document.getElementById('historyTable').innerHTML = logs.map(l => `
-                <tr class="hover:bg-blue-50 transition-colors border-b border-gray-50">
-                    <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${l.timestamp.replace('T', ' ')}</td>
-                    <td class="px-4 py-3 font-medium text-gray-700">${l.user}</td>
-                    <td class="px-4 py-3 text-gray-500">${l.ip}</td>
-                    <td class="px-4 py-3">${formatOp(l.op)}</td>
-                    <td class="px-4 py-3 text-gray-600 break-path font-mono text-xs">${l.file}</td>
-                </tr>
-            `).join('');
+                const res = await fetch(`/api/logs?${params.toString()}`);
+                const logs = await res.json();
+                
+                document.getElementById('historyTable').innerHTML = logs.map(l => `
+                    <tr class="hover:bg-blue-50 transition-colors border-b border-gray-50">
+                        <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${l.timestamp.replace('T', ' ')}</td>
+                        <td class="px-4 py-3 font-medium text-gray-700">${l.user}</td>
+                        <td class="px-4 py-3 text-gray-500">${l.ip}</td>
+                        <td class="px-4 py-3">${formatOp(l.op)}</td>
+                        <td class="px-4 py-3 text-gray-600 break-path font-mono text-xs">${l.file}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Erro ao carregar Histórico:", err);
+            }
         }
 
         let liveTimer;
-        function switchTab(tab) {
+        let isInitialLoad = true; 
+        
+        async function switchTab(tab) {
+            const loader = document.getElementById('loader');
+
             ['dashboard', 'history', 'about'].forEach(t => {
                 document.getElementById(`view-${t}`).classList.add('hidden');
                 document.getElementById(`btn-${t}`).className = "w-full flex items-center px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors";
             });
             
             clearInterval(liveTimer);
+            
+            if(tab === 'dashboard') {
+                document.getElementById('page-title').innerText = "Dashboard em Tempo Real";
+                await loadDashboard(); 
+                liveTimer = setInterval(loadDashboard, 10000); 
+            } else if (tab === 'history') {
+                document.getElementById('page-title').innerText = "Histórico e Busca Avançada";
+                await loadHistory();
+            } else if (tab === 'about') {
+                document.getElementById('page-title').innerText = "Sobre o Sistema";
+            }
+
             document.getElementById(`view-${tab}`).classList.remove('hidden');
             document.getElementById(`btn-${tab}`).className = "w-full flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg transition-colors";
 
-            if(tab === 'dashboard') {
-                document.getElementById('page-title').innerText = "Dashboard em Tempo Real";
-                loadDashboard();
-                liveTimer = setInterval(loadDashboard, 10000);
-            } else if (tab === 'history') {
-                document.getElementById('page-title').innerText = "Histórico e Busca Avançada";
-                loadHistory();
-            } else if (tab === 'about') {
-                document.getElementById('page-title').innerText = "Sobre o Sistema";
+            if (isInitialLoad) {
+                loader.style.opacity = '0';
+                setTimeout(() => { loader.style.display = 'none'; }, 500);
+                isInitialLoad = false;
             }
         }
 
@@ -304,5 +355,3 @@
     </script>
 </body>
 </html>
-
-

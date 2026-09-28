@@ -1,0 +1,57 @@
+<svg viewBox="170 -20 320 320" width="320" height="320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="metalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#B4C0D1"/>
+      <stop offset="55%" stop-color="#8493A8"/>
+      <stop offset="100%" stop-color="#48566B"/>
+    </linearGradient>
+    <radialGradient id="rivetGrad" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#D7DEE8"/>
+      <stop offset="100%" stop-color="#5B6B82"/>
+    </radialGradient>
+    <radialGradient id="bossGrad" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#E4E9F0"/>
+      <stop offset="55%" stop-color="#9AA8BC"/>
+      <stop offset="100%" stop-color="#4A5872"/>
+    </radialGradient>
+  </defs>
+
+  <!-- glow behind shield -->
+  <circle cx="330" cy="140" r="155" fill="url(#glowGrad)"/>
+
+  <!-- outer bevel ring -->
+  <circle cx="330" cy="140" r="90" fill="none" stroke="#0F172A" stroke-width="6"/>
+
+  <!-- shield base plate -->
+  <circle cx="330" cy="140" r="84" fill="url(#metalGrad)" stroke="#0F172A" stroke-width="2.5"/>
+
+  <!-- spikes -->
+  <path d="M314.0,57.5 L330.0,16.0 L346.0,57.5 Z" fill="url(#metalGrad)" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M377.0,70.4 L417.7,52.3 L399.6,93.0 Z" fill="url(#metalGrad)" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M412.5,124.0 L454.0,140.0 L412.5,156.0 Z" fill="url(#metalGrad)" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M399.6,187.0 L417.7,227.7 L377.0,209.6 Z" fill="url(#metalGrad)" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M346.0,222.5 L330.0,264.0 L314.0,222.5 Z" fill="url(#metalGrad)" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M283.0,209.6 L242.3,227.7 L260.4,187.0 Z" fill="url(#metalGrad)" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M247.5,156.0 L206.0,140.0 L247.5,124.0 Z" fill="url(#metalGrad)" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M260.4,93.0 L242.3,52.3 L283.0,70.4 Z" fill="url(#metalGrad)" stroke="#0F172A" stroke-width="1.5" stroke-linejoin="round"/>
+
+  <!-- rivets -->
+  <circle cx="368.3" cy="47.6" r="6" fill="url(#rivetGrad)" stroke="#0F172A" stroke-width="1"/>
+  <circle cx="422.4" cy="101.7" r="6" fill="url(#rivetGrad)" stroke="#0F172A" stroke-width="1"/>
+  <circle cx="422.4" cy="178.3" r="6" fill="url(#rivetGrad)" stroke="#0F172A" stroke-width="1"/>
+  <circle cx="368.3" cy="232.4" r="6" fill="url(#rivetGrad)" stroke="#0F172A" stroke-width="1"/>
+  <circle cx="291.7" cy="232.4" r="6" fill="url(#rivetGrad)" stroke="#0F172A" stroke-width="1"/>
+  <circle cx="237.6" cy="178.3" r="6" fill="url(#rivetGrad)" stroke="#0F172A" stroke-width="1"/>
+  <circle cx="237.6" cy="101.7" r="6" fill="url(#rivetGrad)" stroke="#0F172A" stroke-width="1"/>
+  <circle cx="291.7" cy="47.6" r="6" fill="url(#rivetGrad)" stroke="#0F172A" stroke-width="1"/>
+
+  <!-- outer rim ring -->
+  <circle cx="330" cy="140" r="84" fill="none" stroke="#0F172A" stroke-width="3"/>
+
+  <!-- boss -->
+  <circle cx="330" cy="140" r="34" fill="url(#bossGrad)" stroke="#0F172A" stroke-width="2.5"/>
+</svg>
