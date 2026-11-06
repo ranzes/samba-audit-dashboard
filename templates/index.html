@@ -4,99 +4,201 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Samba Audit</title>
+    <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .break-path { word-break: break-all; min-width: 300px; }
-        
-        /* Regras exclusivas para a geração do PDF */
+
+        .nav-btn {
+            display: flex; align-items: center; justify-content: center; gap: .75rem;
+            width: 100%; padding: .7rem .9rem; border-radius: .75rem;
+            color: #94a3b8; font-size: .9rem; font-weight: 500; text-align: left;
+            transition: all .2s ease;
+        }
+        @media (min-width: 1024px) { .nav-btn { justify-content: flex-start; } }
+        .nav-btn svg { width: 1.25rem; height: 1.25rem; flex-shrink: 0; }
+        .nav-btn:hover { background: rgba(255,255,255,.06); color: #fff; }
+        .nav-btn.active {
+            background: linear-gradient(90deg, rgba(56,189,248,.22), rgba(56,189,248,.04));
+            color: #fff; box-shadow: inset 3px 0 0 #38bdf8;
+        }
+
+        .card {
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem;
+            box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 10px 28px -14px rgba(15,23,42,.15);
+        }
+        .card-title { font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #64748b; }
+        .field {
+            width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .6rem;
+            padding: .5rem .75rem; font-size: .875rem; outline: none; transition: all .15s;
+        }
+        .field:focus { border-color: #38bdf8; background: #fff; box-shadow: 0 0 0 3px rgba(56,189,248,.18); }
+        .view:not(.hidden) { animation: viewIn .25s ease; }
+        @keyframes viewIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+        .print-header { display: none; }
+        tbody tr { transition: background .15s; }
+
+        /* ---------- Conectograma ---------- */
+        #radar-stage canvas { display: block; }
+        .hud-panel {
+            background: rgba(9, 14, 28, 0.9); border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 12px; padding: 14px; backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,.65); pointer-events: auto; color: #e2e8f0;
+        }
+        .hud-btn {
+            background: rgba(0,243,255,.12); border: 1px solid #00f3ff; color: #00f3ff;
+            padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;
+        }
+        .hud-btn:hover { background: #00f3ff; color: #050811; }
+        .hud-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,.03); border-radius: 6px; }
+        .hud-filters label { font-size: 10px; color: #94a3b8; display: block; margin-bottom: 3px; }
+        .hud-filters select { width: 100%; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 4px; padding: 4px 6px; font-size: 11px; }
+        .hud-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.08); }
+        .hud-legend span { display: flex; align-items: center; gap: 5px; }
+        .dot-leg { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        #radar-log { max-height: 210px; overflow-y: auto; font-family: Consolas, monospace; font-size: 11px; display: flex; flex-direction: column; gap: 5px; }
+        .radar-log-item { background: rgba(255,255,255,.04); padding: 6px 8px; border-left: 3px solid #00f3ff; border-radius: 3px; word-break: break-all; cursor: pointer; }
+        .radar-log-item:hover { background: rgba(0,243,255,.1); }
+        .log-user { color: #f472b6; font-weight: bold; }
+        .log-action { color: #34d399; }
+
+        /* ---------- Impressão / relatório ---------- */
         @media print {
-            body { background: white; }
-            #sidebar, #header, #search-card, #tabs-nav { display: none !important; }
+            @page { margin: 12mm; }
+            html, body { height: auto !important; overflow: visible !important; background: #fff !important; display: block !important; }
+            #loader, #sidebar, #header, #search-card, #tabs-nav, #history-bar,
+            #view-dashboard, #view-radar, #view-about { display: none !important; }
+            main { display: block !important; height: auto !important; overflow: visible !important; }
             #view-history { display: block !important; padding: 0 !important; overflow: visible !important; }
             .print-header { display: block !important; margin-bottom: 20px; text-align: center; }
-            .shadow-sm { box-shadow: none !important; border: none !important; }
+            .card, .shadow-sm { box-shadow: none !important; border: none !important; }
+            .overflow-x-auto { overflow: visible !important; }
             table { width: 100%; border-collapse: collapse; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
             .badge-print { border: none !important; background: none !important; padding: 0 !important; font-weight: bold; }
         }
-        .print-header { display: none; }
     </style>
 </head>
-<body class="bg-gray-50 flex h-screen overflow-hidden text-gray-800 font-sans">
+<body class="bg-slate-100 flex h-screen overflow-hidden text-slate-800 antialiased">
 
-    <!-- Tela de Carregamento Real (Apenas F5/Abertura) -->
+    <!-- Tela de Carregamento (apenas na abertura / F5) -->
     <div id="loader" class="fixed inset-0 bg-[#0B1220] z-[9999] flex flex-col justify-center items-center transition-opacity duration-500">
         <div class="w-16 h-16 border-4 border-slate-700 border-t-[#38BDF8] rounded-full animate-spin mb-4"></div>
         <h2 class="text-[#E2E8F0] font-mono text-xl font-bold">Carregando Samba Audit...</h2>
     </div>
 
     <!-- Sidebar -->
-    <aside id="sidebar" class="w-64 bg-gray-900 text-white flex flex-col shadow-2xl z-20">
-        <div class="h-20 flex items-center px-4 border-b border-gray-800">
-            <h1 class="text-xl font-bold tracking-wider text-blue-400 flex items-center">
-                <img src="/static/logo.svg" alt="Shield Logo" class="h-14 w-14 mr-3"> Samba Audit
-            </h1>
+    <aside id="sidebar" class="w-16 lg:w-64 shrink-0 bg-gradient-to-b from-[#0b1220] to-[#111c33] text-white flex flex-col shadow-2xl z-20">
+        <div class="h-20 flex items-center justify-center lg:justify-start px-2 lg:px-5 border-b border-white/5">
+            <img src="/static/logo.svg" alt="Shield Logo" class="h-10 w-10 lg:h-12 lg:w-12 lg:mr-3">
+            <div class="hidden lg:block leading-tight">
+                <h1 class="text-lg font-bold tracking-wide text-white">Samba Audit</h1>
+                <p class="text-[10px] text-sky-300/80 uppercase tracking-widest">Auditoria de acessos</p>
+            </div>
         </div>
-        <nav id="tabs-nav" class="flex-1 px-4 py-6 space-y-2">
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="w-full flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg transition-colors">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
-                Tempo Real
+        <nav id="tabs-nav" class="flex-1 px-2 lg:px-4 py-6 space-y-1.5">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn active" title="Tempo Real">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                <span class="hidden lg:inline">Tempo Real</span>
             </button>
-            <button onclick="switchTab('history')" id="btn-history" class="w-full flex items-center px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                Histórico e Busca
+            <button onclick="switchTab('radar')" id="btn-radar" class="nav-btn" title="Conectograma">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                <span class="hidden lg:inline">Conectograma</span>
             </button>
-            <button onclick="switchTab('about')" id="btn-about" class="w-full flex items-center px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Sobre
+            <button onclick="switchTab('history')" id="btn-history" class="nav-btn" title="Histórico e Busca">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <span class="hidden lg:inline">Histórico e Busca</span>
+            </button>
+            <button onclick="switchTab('about')" id="btn-about" class="nav-btn" title="Sobre">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="hidden lg:inline">Sobre</span>
             </button>
         </nav>
+        <div class="hidden lg:block px-5 py-4 border-t border-white/5 text-[11px] text-slate-500">Tamar Works · Samba Audit</div>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col h-screen overflow-hidden">
-        
+    <main class="flex-1 min-w-0 flex flex-col h-screen overflow-hidden">
+
         <!-- Headerbar -->
-        <header id="header" class="h-20 bg-white shadow-sm flex items-center justify-between px-8 z-10">
-            <h2 id="page-title" class="text-xl font-semibold text-gray-700">Dashboard em Tempo Real</h2>
-            <div class="flex items-center text-sm text-gray-500">
-                <span class="relative flex h-3 w-3 mr-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+        <header id="header" class="h-20 shrink-0 bg-white/80 backdrop-blur border-b border-slate-200 flex items-center justify-between px-6 lg:px-8 z-10">
+            <div>
+                <h2 id="page-title" class="text-xl font-semibold text-slate-800">Dashboard em Tempo Real</h2>
+                <p id="page-sub" class="text-xs text-slate-500 mt-0.5">Visão geral dos acessos ao compartilhamento</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="last-update" class="hidden md:inline text-xs text-slate-400"></span>
+                <span id="status-pill" class="inline-flex items-center gap-2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 text-xs font-medium">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-60"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-current"></span>
+                    </span>
+                    <span id="status-text">Serviço Ativo</span>
                 </span>
-                Serviço Ativo
             </div>
         </header>
 
         <!-- DASHBOARD VIEW -->
-        <div id="view-dashboard" class="flex-1 overflow-y-auto p-8 hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-4">🏆 Top Usuários</h3>
-                    <div class="relative h-64"><canvas id="chartUsers"></canvas></div>
+        <div id="view-dashboard" class="view flex-1 overflow-y-auto p-6 lg:p-8 hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                <div class="card p-5 flex items-center gap-4">
+                    <div class="h-12 w-12 rounded-xl bg-sky-50 flex items-center justify-center text-2xl shrink-0">🏆</div>
+                    <div class="min-w-0">
+                        <p class="card-title">Usuário mais ativo</p>
+                        <p id="kpi-user" class="text-lg font-bold text-slate-800 truncate">—</p>
+                        <p id="kpi-user-sub" class="text-xs text-slate-500 truncate">Calculando…</p>
+                    </div>
                 </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-4">🔥 Arquivos Quentes</h3>
-                    <div class="relative h-64"><canvas id="chartFiles"></canvas></div>
+                <div class="card p-5 flex items-center gap-4">
+                    <div class="h-12 w-12 rounded-xl bg-amber-50 flex items-center justify-center text-2xl shrink-0">🔥</div>
+                    <div class="min-w-0">
+                        <p class="card-title">Arquivo mais quente</p>
+                        <p id="kpi-file" class="text-lg font-bold text-slate-800 truncate">—</p>
+                        <p id="kpi-file-sub" class="text-xs text-slate-500 truncate">Calculando…</p>
+                    </div>
                 </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="text-red-500 text-sm font-semibold uppercase tracking-wider mb-4">🗑 Maiores Exclusões</h3>
-                    <div class="relative h-64"><canvas id="chartDeletes"></canvas></div>
+                <div class="card p-5 flex items-center gap-4">
+                    <div class="h-12 w-12 rounded-xl bg-red-50 flex items-center justify-center text-2xl shrink-0">🗑</div>
+                    <div class="min-w-0">
+                        <p class="card-title">Quem mais apagou</p>
+                        <p id="kpi-del" class="text-lg font-bold text-slate-800 truncate">—</p>
+                        <p id="kpi-del-sub" class="text-xs text-slate-500 truncate">Calculando…</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 class="font-semibold text-gray-700">Últimos Eventos Capturados</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-3">
+                <div class="card p-6">
+                    <h3 class="card-title mb-4">🏆 Top Usuários</h3>
+                    <div class="relative h-64"><canvas id="chartUsers"></canvas></div>
+                </div>
+                <div class="card p-6">
+                    <h3 class="card-title mb-4">🔥 Arquivos Quentes</h3>
+                    <div class="relative h-64"><canvas id="chartFiles"></canvas></div>
+                </div>
+                <div class="card p-6">
+                    <h3 class="card-title mb-4 !text-red-500">🗑 Maiores Exclusões</h3>
+                    <div class="relative h-64"><canvas id="chartDeletes"></canvas></div>
+                </div>
+            </div>
+            <p class="text-xs text-slate-400 mb-6">Rankings calculados sobre os eventos mais recentes do banco e atualizados em segundo plano.</p>
+
+            <div class="card overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
+                    <h3 class="font-semibold text-slate-700">Últimos Eventos Capturados</h3>
+                    <span class="inline-flex items-center gap-2 text-xs text-slate-500"><span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span> ao vivo</span>
                 </div>
                 <div class="overflow-x-auto p-4">
                     <table class="w-full text-left text-sm">
-                        <thead class="text-gray-400 bg-gray-50 uppercase text-xs font-semibold">
+                        <thead class="text-slate-400 bg-slate-50 uppercase text-xs font-semibold">
                             <tr>
                                 <th class="px-4 py-3 rounded-l-lg">Data/Hora</th>
                                 <th class="px-4 py-3">Usuário</th>
@@ -104,50 +206,91 @@
                                 <th class="px-4 py-3 rounded-r-lg">Caminho do Arquivo</th>
                             </tr>
                         </thead>
-                        <tbody id="liveTable" class="divide-y divide-gray-50"></tbody>
+                        <tbody id="liveTable" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
+        <!-- CONECTOGRAMA VIEW (3D/2D) -->
+        <div id="view-radar" class="view flex-1 relative overflow-hidden hidden bg-[#050811]">
+            <div id="radar-stage" class="absolute inset-0"></div>
+            <div id="radar-msg" class="absolute inset-0 items-center justify-center text-slate-300 text-sm p-8 text-center" style="display:none"></div>
+
+            <div class="absolute top-4 left-4 z-10 w-[340px] max-w-[calc(100%-2rem)] pointer-events-none">
+                <div class="hud-panel">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="m-0 text-[13px] font-bold uppercase tracking-wider text-[#00f3ff]">Conectograma Samba</h3>
+                        <button id="radar-toggle-view" class="hud-btn" type="button">Mudar p/ 3D</button>
+                    </div>
+                    <div class="hud-filters">
+                        <div>
+                            <label>Filtrar Setor (/dados):</label>
+                            <select id="radar-sector"><option value="">Todos (Visão Geral)</option></select>
+                        </div>
+                        <div>
+                            <label>Nível Máx. de Pastas:</label>
+                            <select id="radar-depth">
+                                <option value="1">Apenas Setores (Limpo)</option>
+                                <option value="2" selected>Setores + 1 Subnível</option>
+                                <option value="3">Até 3 Níveis</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="hud-legend">
+                        <span><i class="dot-leg" style="background:#00f3ff"></i> /dados</span>
+                        <span><i class="dot-leg" style="background:#3b82f6"></i> Setores</span>
+                        <span><i class="dot-leg" style="background:#f59e0b"></i> Subpastas</span>
+                        <span><i class="dot-leg" style="background:#ec4899"></i> Usuários</span>
+                    </div>
+                    <div id="radar-log"></div>
+                </div>
+            </div>
+
+            <div class="absolute bottom-4 right-4 z-10 pointer-events-none text-[11px] text-slate-300 bg-[rgba(9,14,28,.88)] border border-white/10 rounded-lg px-3 py-2">
+                🖱️ Arraste para mover | Scroll: Zoom | Clique em um log para focar no setor
+            </div>
+        </div>
+
         <!-- HISTORY VIEW -->
-        <div id="view-history" class="flex-1 overflow-y-auto p-8 hidden">
-            
+        <div id="view-history" class="view flex-1 overflow-y-auto p-6 lg:p-8 hidden">
+
             <div class="print-header">
-                <img src="/static/Logo-final-3.png" style="height: 60px; margin: 0 auto 10px auto;">
+                <img src="/static/Logo-final-3.png" onerror="this.onerror=null;this.src='/static/logo.svg'" alt="Logo" style="height: 60px; margin: 0 auto 10px auto;">
                 <h2>Relatório de Auditoria de Acessos</h2>
                 <p>Gerado pelo sistema Samba Audit</p>
+                <p id="print-meta" style="font-size: 12px; color: #555;"></p>
                 <hr style="margin: 15px 0;">
             </div>
 
             <!-- Search Form -->
-            <div id="search-card" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <div id="search-card" class="card p-6 mb-6">
                 <form id="searchForm" class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4 items-end" onsubmit="event.preventDefault(); switchTab('history');">
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Data Início</label>
-                        <input type="date" id="date_from" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Data Início</label>
+                        <input type="date" id="date_from" class="field">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Data Fim</label>
-                        <input type="date" id="date_to" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Data Fim</label>
+                        <input type="date" id="date_to" class="field">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Usuário</label>
-                        <input type="text" id="s_user" placeholder="Ex: carlos" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Usuário</label>
+                        <input type="text" id="s_user" placeholder="Ex: carlos" class="field">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">IP Origem</label>
-                        <input type="text" id="s_ip" placeholder="Ex: 172.16." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">IP Origem</label>
+                        <input type="text" id="s_ip" placeholder="Ex: 172.16." class="field">
                     </div>
                     <div class="lg:col-span-2">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Arquivo / Pasta</label>
-                        <input type="text" id="s_file" placeholder="Nome do arquivo..." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500">
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Arquivo / Pasta</label>
+                        <input type="text" id="s_file" placeholder="Nome do arquivo..." class="field">
                     </div>
-                    <div class="flex space-x-2">
-                        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-3 py-2 text-sm transition-colors shadow-lg shadow-blue-500/30" title="Buscar">
+                    <div class="flex gap-2">
+                        <button type="submit" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg px-3 py-2 text-sm transition-colors shadow-lg shadow-sky-500/30" title="Buscar">
                             Buscar
                         </button>
-                        <button type="button" onclick="window.print()" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-medium rounded-lg px-3 py-2 text-sm transition-colors shadow-lg flex justify-center items-center" title="Imprimir / Salvar PDF">
+                        <button type="button" onclick="printReport()" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg px-3 py-2 text-sm transition-colors shadow-lg flex justify-center items-center" title="Imprimir / Salvar PDF">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                         </button>
                     </div>
@@ -155,10 +298,13 @@
             </div>
 
             <!-- Results Table -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="card overflow-hidden">
+                <div id="history-bar" class="px-6 py-3 border-b border-slate-100 bg-slate-50/70 text-xs text-slate-500">
+                    <span id="history-count">—</span>
+                </div>
                 <div class="overflow-x-auto p-4">
                     <table class="w-full text-left text-sm">
-                        <thead class="text-gray-400 bg-gray-50 uppercase text-xs font-semibold">
+                        <thead class="text-slate-400 bg-slate-50 uppercase text-xs font-semibold">
                             <tr>
                                 <th class="px-4 py-3 rounded-l-lg w-40">Data/Hora</th>
                                 <th class="px-4 py-3">Usuário</th>
@@ -167,55 +313,51 @@
                                 <th class="px-4 py-3 rounded-r-lg">Caminho do Arquivo</th>
                             </tr>
                         </thead>
-                        <tbody id="historyTable" class="divide-y divide-gray-50"></tbody>
+                        <tbody id="historyTable" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
         <!-- ABOUT VIEW -->
-        <div id="view-about" class="flex-1 overflow-y-auto p-8 hidden flex items-center justify-center bg-gray-50">
-            <div class="bg-white p-10 rounded-2xl shadow-xl border border-gray-100 max-w-lg text-center w-full">
-                
-                <img src="/static/Logo-final-3.png" alt="Tamar Works" class="h-40 mx-auto mb-2 relative z-20">
-                
-                <!-- Container da Animação do Link/Lema Tamar Works -->
-                <div class="group relative flex flex-col items-center justify-start h-16 mb-2 mt-2">
-                    <a href="https://tamarworks.com.br" target="_blank" class="text-blue-600 text-lg font-semibold hover:underline relative z-10 bg-white px-3 py-1">
-                        tamarworks.com.br
-                    </a>
-                    <p class="text-sm text-gray-500 italic absolute top-6 opacity-0 transform -translate-y-5 group-hover:translate-y-3 group-hover:opacity-100 transition-all duration-300 ease-out z-0 whitespace-nowrap">
-                        Conectando pessoas, tecnologia e resultados.
-                    </p>
-                </div>
+        <div id="view-about" class="view flex-1 overflow-y-auto p-6 lg:p-8 hidden bg-slate-100">
+            <div class="min-h-full flex items-center justify-center">
+                <div class="card p-10 max-w-lg text-center w-full">
 
-                <!-- NOVA Animação do GitHub (Hitbox grande que abrange a animação horizontal) -->
-                <div class="flex justify-center mb-6">
-                    <a href="https://github.com/ranzes/samba-audit-dashboard" target="_blank" class="group relative flex items-center justify-center w-64 h-16 cursor-pointer" title="Acessar Repositório">
-                        
-                        <!-- Texto que desliza para a direita -->
-                        <span class="absolute font-semibold text-gray-700 whitespace-nowrap opacity-0 transform -translate-x-12 group-hover:translate-x-8 group-hover:opacity-100 transition-all duration-300 ease-out z-0">
-                            Repositório SRD
-                        </span>
-                        
-                        <!-- Logo GitHub que desliza para a esquerda -->
-                        <div class="absolute z-10 bg-white rounded-full text-gray-800 group-hover:text-black transform translate-x-0 group-hover:-translate-x-16 transition-all duration-300 ease-out flex items-center justify-center">
-                            <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path>
-                            </svg>
-                        </div>
-                    </a>
-                </div>
-                
-                <hr class="border-gray-200 mb-8 mt-2">
-                
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Ranzes Tamar</h2>
-                <div class="text-gray-600 space-y-2 text-sm">
-                    <p class="flex items-center justify-center"><svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> HP Master Engineer Certified</p>
-                    <p class="flex items-center justify-center"><svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Cisco Network Certified</p>
-                    <p class="flex items-center justify-center"><svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Novell Linux Certified</p>
-                    <p class="flex items-center justify-center"><svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Comptia L+ Certified</p>
-                    <p class="flex items-center justify-center"><svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> LPI Certified</p>
+                    <img src="/static/Logo-final-3.png" onerror="this.onerror=null;this.src='/static/logo.svg'" alt="Tamar Works" class="h-40 mx-auto mb-2 relative z-20">
+
+                    <div class="group relative flex flex-col items-center justify-start h-16 mb-2 mt-2">
+                        <a href="https://tamarworks.com.br" target="_blank" class="text-sky-600 text-lg font-semibold hover:underline relative z-10 bg-white px-3 py-1">
+                            tamarworks.com.br
+                        </a>
+                        <p class="text-sm text-slate-500 italic absolute top-6 opacity-0 transform -translate-y-5 group-hover:translate-y-3 group-hover:opacity-100 transition-all duration-300 ease-out z-0 whitespace-nowrap">
+                            Conectando pessoas, tecnologia e resultados.
+                        </p>
+                    </div>
+
+                    <div class="flex justify-center mb-6">
+                        <a href="https://github.com/ranzes/samba-audit-dashboard" target="_blank" class="group relative flex items-center justify-center w-64 h-16 cursor-pointer" title="Acessar Repositório">
+                            <span class="absolute font-semibold text-slate-700 whitespace-nowrap opacity-0 transform -translate-x-12 group-hover:translate-x-8 group-hover:opacity-100 transition-all duration-300 ease-out z-0">
+                                Repositório SRD
+                            </span>
+                            <div class="absolute z-10 bg-white rounded-full text-slate-800 group-hover:text-black transform translate-x-0 group-hover:-translate-x-16 transition-all duration-300 ease-out flex items-center justify-center">
+                                <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                        </a>
+                    </div>
+
+                    <hr class="border-slate-200 mb-8 mt-2">
+
+                    <h2 class="text-2xl font-bold text-slate-800 mb-4">Ranzes Tamar</h2>
+                    <div class="text-slate-600 space-y-2 text-sm">
+                        <p><span class="text-emerald-500 mr-2">✓</span>HP Master Engineer Certified</p>
+                        <p><span class="text-emerald-500 mr-2">✓</span>Cisco Network Certified</p>
+                        <p><span class="text-emerald-500 mr-2">✓</span>Novell Linux Certified</p>
+                        <p><span class="text-emerald-500 mr-2">✓</span>Comptia L+ Certified</p>
+                        <p><span class="text-emerald-500 mr-2">✓</span>LPI Certified</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -223,6 +365,29 @@
     </main>
 
     <script>
+        /* ================= Utilitários ================= */
+        const $ = id => document.getElementById(id);
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const shortUser = u => { u = String(u == null ? '' : u); const i = u.lastIndexOf('\\'); return i >= 0 ? u.slice(i + 1) : u; };
+        const shortPath = p => { const parts = String(p || '').split('/').filter(Boolean); const s = parts.slice(-2).join('/') || String(p || ''); return s.length > 28 ? s.slice(0, 26) + '…' : s; };
+        const fmtNum = n => Number(n || 0).toLocaleString('pt-BR');
+
+        function fmtTs(ts) {
+            const raw = String(ts == null ? '' : ts);
+            const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}:\d{2}:\d{2})/.exec(raw);
+            return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : esc(raw.replace('T', ' '));
+        }
+
+        async function getJSON(url, ms = 15000) {
+            const ctl = new AbortController();
+            const t = setTimeout(() => ctl.abort(), ms);
+            try {
+                const r = await fetch(url, { signal: ctl.signal });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return await r.json();
+            } finally { clearTimeout(t); }
+        }
+
         const opDict = {
             'unlinkat': { label: 'Apagado', badge: 'bg-red-100 text-red-700 border-red-200' },
             'renameat': { label: 'Renomeado', badge: 'bg-orange-100 text-orange-700 border-orange-200' },
@@ -231,120 +396,556 @@
             'mkdirat': { label: 'Pasta Criada', badge: 'bg-green-100 text-green-700 border-green-200' },
             'rmdir': { label: 'Pasta Apagada', badge: 'bg-red-100 text-red-700 border-red-200' },
             'fchown': { label: 'Permissão Alterada', badge: 'bg-purple-100 text-purple-700 border-purple-200' },
-            'fchmod': { label: 'Permissão Alterada', badge: 'bg-purple-100 text-purple-700 border-purple-200' }
+            'fchmod': { label: 'Permissão Alterada', badge: 'bg-purple-100 text-purple-700 border-purple-200' },
+            'openat': { label: 'Aberto', badge: 'bg-sky-100 text-sky-700 border-sky-200' },
+            'pread': { label: 'Lido', badge: 'bg-slate-100 text-slate-700 border-slate-200' }
         };
 
         function formatOp(op) {
-            const def = opDict[op] || { label: op, badge: 'bg-gray-100 text-gray-700 border-gray-200' };
+            const def = opDict[op] || { label: esc(op), badge: 'bg-gray-100 text-gray-700 border-gray-200' };
             return `<span class="px-3 py-1 rounded-full text-xs font-medium border ${def.badge} badge-print">${def.label}</span>`;
         }
 
-        let charts = {};
+        function setStatus(ok) {
+            $('status-pill').className = 'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ' +
+                (ok ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200');
+            $('status-text').textContent = ok ? 'Serviço Ativo' : 'Sem resposta do serviço';
+        }
 
-        function initChart(id, type, data, bgColors) {
-            const ctx = document.getElementById(id).getContext('2d');
-            if (charts[id]) charts[id].destroy();
-            
-            charts[id] = new Chart(ctx, {
-                type: type,
-                data: {
-                    labels: data.map(d => d.label),
-                    datasets: [{
-                        data: data.map(d => d.val),
-                        backgroundColor: bgColors,
-                        borderWidth: 0,
-                        borderRadius: type === 'bar' ? 4 : 0
-                    }]
-                },
+        /* ================= Dashboard ================= */
+        const charts = {};
+        const PALETTE = ['#38bdf8', '#6366f1', '#10b981', '#f59e0b', '#ec4899'];
+        if (window.Chart) {
+            Chart.defaults.font.family = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+            Chart.defaults.color = '#64748b';
+        }
+
+        function upsertChart(id, type, labels, values, colors, full) {
+            if (!window.Chart) return;
+            const canvas = $(id);
+            if (!canvas) return;
+            const data = {
+                labels,
+                datasets: [{
+                    data: values, backgroundColor: colors,
+                    borderWidth: type === 'doughnut' ? 2 : 0, borderColor: '#fff',
+                    borderRadius: type === 'bar' ? 6 : 0, maxBarThickness: 22
+                }]
+            };
+            if (charts[id]) {
+                charts[id].data = data;
+                charts[id].$full = full;
+                charts[id].update('none');
+                return;
+            }
+            charts[id] = new Chart(canvas.getContext('2d'), {
+                type,
+                data,
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: type === 'doughnut', position: 'right' } },
-                    scales: type === 'bar' ? { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } : {}
+                    indexAxis: type === 'bar' ? 'y' : 'x',
+                    cutout: type === 'doughnut' ? '62%' : undefined,
+                    plugins: {
+                        legend: { display: type === 'doughnut', position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, padding: 12 } },
+                        tooltip: {
+                            callbacks: {
+                                title: items => {
+                                    const f = charts[id] && charts[id].$full;
+                                    return (f && f[items[0].dataIndex]) || items[0].label;
+                                }
+                            }
+                        }
+                    },
+                    scales: type === 'bar' ? {
+                        x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                        y: { grid: { display: false } }
+                    } : {}
                 }
             });
+            charts[id].$full = full;
+        }
+
+        function setKpi(prefix, main, sub) {
+            $(prefix).textContent = main;
+            $(prefix + '-sub').textContent = sub;
+        }
+
+        function renderDashboard(data) {
+            const tu = data.top_users || [], tf = data.top_files || [], td = data.top_deletes || [];
+            upsertChart('chartUsers', 'bar', tu.map(u => shortUser(u.user)), tu.map(u => u.count), '#38bdf8', tu.map(u => u.user));
+            upsertChart('chartFiles', 'doughnut', tf.map(f => shortPath(f.file)), tf.map(f => f.count), PALETTE, tf.map(f => f.file));
+            upsertChart('chartDeletes', 'bar', td.map(u => shortUser(u.user)), td.map(u => u.count), '#ef4444', td.map(u => u.user));
+
+            if (tu[0]) setKpi('kpi-user', shortUser(tu[0].user), fmtNum(tu[0].count) + ' eventos'); else setKpi('kpi-user', '—', 'Calculando…');
+            if (tf[0]) setKpi('kpi-file', shortPath(tf[0].file), fmtNum(tf[0].count) + ' acessos · ' + tf[0].file); else setKpi('kpi-file', '—', 'Calculando…');
+            if (td[0]) setKpi('kpi-del', shortUser(td[0].user), fmtNum(td[0].count) + ' exclusões'); else setKpi('kpi-del', '—', 'Sem exclusões no período');
+        }
+
+        function liveRow(l) {
+            return `
+                <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${fmtTs(l.timestamp)}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700">${esc(l.user)}</td>
+                    <td class="px-4 py-3">${formatOp(l.op)}</td>
+                    <td class="px-4 py-3 text-slate-600 break-path font-mono text-xs">${esc(l.file)}</td>
+                </tr>`;
         }
 
         async function loadDashboard() {
-            try {
-                const res = await fetch('/api/dashboard');
-                const data = await res.json();
-                
-                initChart('chartUsers', 'bar', data.top_users.map(u => ({label: u.user, val: u.count})), '#3b82f6');
-                initChart('chartFiles', 'doughnut', data.top_files.map(f => ({label: f.file.substring(0,20), val: f.count})), ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899']);
-                initChart('chartDeletes', 'bar', data.top_deletes.map(u => ({label: u.user, val: u.count})), '#ef4444');
+            const [d, l] = await Promise.allSettled([
+                getJSON('/api/dashboard', 15000),
+                getJSON('/api/logs?limit=15', 15000)
+            ]);
+            let ok = false;
+            if (d.status === 'fulfilled') { ok = true; renderDashboard(d.value); } else console.error('Erro dashboard:', d.reason);
+            if (l.status === 'fulfilled') { ok = true; $('liveTable').innerHTML = l.value.map(liveRow).join(''); } else console.error('Erro logs:', l.reason);
+            setStatus(ok);
+            if (ok) $('last-update').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+        }
 
-                const logsRes = await fetch('/api/logs?limit=15');
-                const logs = await logsRes.json();
-                document.getElementById('liveTable').innerHTML = logs.map(l => `
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${l.timestamp.replace('T', ' ')}</td>
-                        <td class="px-4 py-3 font-medium text-gray-700">${l.user}</td>
-                        <td class="px-4 py-3">${formatOp(l.op)}</td>
-                        <td class="px-4 py-3 text-gray-600 break-path font-mono text-xs">${l.file}</td>
-                    </tr>
-                `).join('');
-            } catch (err) {
-                console.error("Erro ao carregar Dashboard:", err);
-            }
+        /* ================= Histórico / Relatório ================= */
+        let lastHistoryCount = 0;
+
+        function historyRow(l) {
+            return `
+                <tr class="hover:bg-sky-50/60">
+                    <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${fmtTs(l.timestamp)}</td>
+                    <td class="px-4 py-3 font-medium text-slate-700">${esc(l.user)}</td>
+                    <td class="px-4 py-3 text-slate-500">${esc(l.ip)}</td>
+                    <td class="px-4 py-3">${formatOp(l.op)}</td>
+                    <td class="px-4 py-3 text-slate-600 break-path font-mono text-xs">${esc(l.file)}</td>
+                </tr>`;
         }
 
         async function loadHistory() {
+            const tbody = $('historyTable');
+            $('history-count').textContent = 'Carregando…';
             try {
                 const params = new URLSearchParams({
-                    date_from: document.getElementById('date_from').value,
-                    date_to: document.getElementById('date_to').value,
-                    user: document.getElementById('s_user').value,
-                    ip: document.getElementById('s_ip').value,
-                    file: document.getElementById('s_file').value,
+                    date_from: $('date_from').value,
+                    date_to: $('date_to').value,
+                    user: $('s_user').value,
+                    ip: $('s_ip').value,
+                    file: $('s_file').value,
                     limit: 500
                 });
-
-                const res = await fetch(`/api/logs?${params.toString()}`);
-                const logs = await res.json();
-                
-                document.getElementById('historyTable').innerHTML = logs.map(l => `
-                    <tr class="hover:bg-blue-50 transition-colors border-b border-gray-50">
-                        <td class="px-4 py-3 text-gray-500 whitespace-nowrap">${l.timestamp.replace('T', ' ')}</td>
-                        <td class="px-4 py-3 font-medium text-gray-700">${l.user}</td>
-                        <td class="px-4 py-3 text-gray-500">${l.ip}</td>
-                        <td class="px-4 py-3">${formatOp(l.op)}</td>
-                        <td class="px-4 py-3 text-gray-600 break-path font-mono text-xs">${l.file}</td>
-                    </tr>
-                `).join('');
+                const logs = await getJSON(`/api/logs?${params.toString()}`, 60000);
+                lastHistoryCount = logs.length;
+                tbody.innerHTML = logs.length
+                    ? logs.map(historyRow).join('')
+                    : '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">Nenhum registro encontrado.</td></tr>';
+                $('history-count').textContent = `Exibindo os ${fmtNum(logs.length)} eventos mais recentes`;
             } catch (err) {
-                console.error("Erro ao carregar Histórico:", err);
+                console.error('Erro ao carregar Histórico:', err);
+                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">Não foi possível carregar o histórico.</td></tr>';
+                $('history-count').textContent = 'Erro ao carregar';
             }
         }
 
-        let liveTimer;
-        let isInitialLoad = true; 
-        
-        async function switchTab(tab) {
-            const loader = document.getElementById('loader');
+        function updatePrintMeta() {
+            $('print-meta').textContent = `Emitido em ${new Date().toLocaleString('pt-BR')} · ${fmtNum(lastHistoryCount)} registros`;
+        }
+        function printReport() { updatePrintMeta(); window.print(); }
+        window.addEventListener('beforeprint', updatePrintMeta);
 
-            ['dashboard', 'history', 'about'].forEach(t => {
-                document.getElementById(`view-${t}`).classList.add('hidden');
-                document.getElementById(`btn-${t}`).className = "w-full flex items-center px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors";
-            });
-            
-            clearInterval(liveTimer);
-            
-            if(tab === 'dashboard') {
-                document.getElementById('page-title').innerText = "Dashboard em Tempo Real";
-                await loadDashboard(); 
-                liveTimer = setInterval(loadDashboard, 10000); 
-            } else if (tab === 'history') {
-                document.getElementById('page-title').innerText = "Histórico e Busca Avançada";
-                await loadHistory();
-            } else if (tab === 'about') {
-                document.getElementById('page-title').innerText = "Sobre o Sistema";
+        /* ================= Conectograma (3D/2D) ================= */
+        const Radar = (() => {
+            const RING = [0, 42, 82, 118, 155];
+            let libsPromise = null, ready = false, active = false, gen = 0, raf = 0, pollTimer = 0;
+            let scene, camera, renderer, controls, stage;
+            let is2D = true, maxDepth = 2, currentSector = '', lastEventId = 0;
+            let treeNodes = {}, structuralLines = [], beams = [];
+            const usersMap = {};
+
+            function loadScript(src) {
+                return new Promise((res, rej) => {
+                    const s = document.createElement('script');
+                    s.src = src; s.onload = res;
+                    s.onerror = () => rej(new Error('Falha ao carregar ' + src));
+                    document.head.appendChild(s);
+                });
             }
 
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            document.getElementById(`btn-${tab}`).className = "w-full flex items-center px-4 py-3 bg-blue-600 text-white rounded-lg transition-colors";
+            async function ensureLibs() {
+                if (window.THREE && THREE.OrbitControls) return;
+                if (!libsPromise) {
+                    libsPromise = (async () => {
+                        if (!window.THREE) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+                        if (!THREE.OrbitControls) await loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
+                    })().catch(e => { libsPromise = null; throw e; });
+                }
+                await libsPromise;
+            }
+
+            function showMsg(text) {
+                const m = $('radar-msg');
+                m.textContent = text;
+                m.style.display = text ? 'flex' : 'none';
+            }
+
+            function disposeGroup(g) {
+                scene.remove(g);
+                g.traverse(o => {
+                    if (o.geometry) o.geometry.dispose();
+                    if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
+                });
+            }
+
+            function createLabel(text, textColor = '#f8fafc', bgColor = 'rgba(15, 23, 42, 0.88)', fontSize = 26) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 512; canvas.height = 96;
+                ctx.font = `bold ${fontSize}px Segoe UI, sans-serif`;
+                const clean = text.length > 22 ? text.slice(0, 20) + '…' : text;
+                const w = ctx.measureText(clean).width + 26;
+                ctx.fillStyle = bgColor; ctx.strokeStyle = textColor; ctx.lineWidth = 2;
+                ctx.beginPath();
+                if (ctx.roundRect) ctx.roundRect(256 - w / 2, 20, w, 50, 8); else ctx.rect(256 - w / 2, 20, w, 50);
+                ctx.fill(); ctx.stroke();
+                ctx.fillStyle = textColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(clean, 256, 46);
+                const tex = new THREE.CanvasTexture(canvas);
+                const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+                sprite.scale.set(15, 2.8, 1);
+                return sprite;
+            }
+
+            function createVisualNode(name, depth) {
+                const group = new THREE.Group();
+                const geo = depth === 0 ? new THREE.SphereGeometry(3.2, 24, 24)
+                          : depth === 1 ? new THREE.CylinderGeometry(2.0, 2.0, 1.2, 6)
+                          : new THREE.SphereGeometry(1.3, 16, 16);
+                const colorHex = depth === 0 ? 0x00f3ff : (depth === 1 ? 0x3b82f6 : 0xf59e0b);
+                const labelColor = depth === 0 ? '#00f3ff' : (depth === 1 ? '#60a5fa' : '#fbbf24');
+                const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 }));
+                mesh.userData.origColor = colorHex;
+                group.add(mesh);
+                const label = createLabel(name, labelColor);
+                label.position.set(0, 2.6, 0);
+                group.add(label);
+                scene.add(group);
+                return group;
+            }
+
+            function clearGraph() {
+                Object.values(treeNodes).forEach(n => disposeGroup(n.group));
+                structuralLines.forEach(l => { scene.remove(l); l.geometry.dispose(); l.material.dispose(); });
+                structuralLines.length = 0;
+                treeNodes = {};
+                treeNodes['/dados'] = { path: '/dados', name: '/dados', depth: 0, children: [], group: createVisualNode('/dados', 0) };
+            }
+
+            function ensureFolderPath(rawPath, skipLayout = false) {
+                const parts = rawPath.split('/').filter(Boolean);
+                if (parts.length === 0 || parts[0] !== 'dados') return treeNodes['/dados'];
+                if (currentSector && parts[1] && parts[1] !== currentSector) return null;
+
+                const capped = parts.slice(0, 1 + maxDepth);
+                let currentPath = '/dados';
+                let parentObj = treeNodes['/dados'];
+                let addedNew = false;
+
+                for (let i = 1; i < capped.length; i++) {
+                    currentPath += '/' + capped[i];
+                    if (!treeNodes[currentPath]) {
+                        const obj = { path: currentPath, name: capped[i], depth: i, parent: parentObj, children: [], group: createVisualNode(capped[i], i) };
+                        treeNodes[currentPath] = obj;
+                        parentObj.children.push(obj);
+                        addedNew = true;
+                    }
+                    parentObj = treeNodes[currentPath];
+                }
+                if (addedNew && !skipLayout) recalculateTreeLayout();
+                return parentObj;
+            }
+
+            function recalculateTreeLayout() {
+                structuralLines.forEach(l => { scene.remove(l); l.geometry.dispose(); l.material.dispose(); });
+                structuralLines.length = 0;
+
+                const root = treeNodes['/dados'];
+                if (!root) return;
+                root.group.position.set(0, 0, 0);
+
+                function layoutSubtree(node, startAngle, endAngle) {
+                    const count = node.children.length;
+                    if (count === 0) return;
+                    const step = (endAngle - startAngle) / count;
+                    node.children.forEach((child, index) => {
+                        const a0 = startAngle + index * step;
+                        const a1 = a0 + step;
+                        const mid = (a0 + a1) / 2;
+                        const baseR = RING[Math.min(child.depth, 3)];
+                        const stagger = count > 8 ? ((index % 2) * 8 - 4) : 0;
+                        const r = baseR + stagger;
+                        const y = is2D ? 0 : -child.depth * 8;
+                        child.group.position.set(Math.cos(mid) * r, y, Math.sin(mid) * r);
+
+                        const geo = new THREE.BufferGeometry().setFromPoints([node.group.position.clone(), child.group.position.clone()]);
+                        const mat = new THREE.LineBasicMaterial({ color: child.depth === 1 ? 0x3b82f6 : 0x475569, transparent: true, opacity: 0.45 });
+                        const line = new THREE.Line(geo, mat);
+                        scene.add(line);
+                        structuralLines.push(line);
+                        layoutSubtree(child, a0, a1);
+                    });
+                }
+                layoutSubtree(root, 0, Math.PI * 2);
+
+                const keys = Object.keys(usersMap);
+                keys.forEach((u, idx) => {
+                    const angle = (idx / Math.max(1, keys.length)) * Math.PI * 2;
+                    usersMap[u].position.set(Math.cos(angle) * RING[4], is2D ? 0 : 18, Math.sin(angle) * RING[4]);
+                });
+            }
+
+            function getOrCreateUser(username) {
+                if (usersMap[username]) return usersMap[username];
+                const group = new THREE.Group();
+                group.add(new THREE.Mesh(new THREE.OctahedronGeometry(2.0, 0), new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.2 })));
+                const label = createLabel(shortUser(username), '#f472b6', 'rgba(45, 10, 35, 0.92)');
+                label.position.set(0, 2.8, 0);
+                group.add(label);
+                scene.add(group);
+                usersMap[username] = group;
+                recalculateTreeLayout();
+                return group;
+            }
+
+            function triggerActivity(ev) {
+                const target = ensureFolderPath(ev.caminho);
+                if (!target) return;
+                const userGroup = getOrCreateUser(ev.usuario);
+
+                const isDel = ev.acao.includes('Apagando');
+                const isWrite = ev.acao.includes('Gravando') || ev.acao.includes('Criando');
+                const color = isDel ? 0xef4444 : (isWrite ? 0x10b981 : 0x00f3ff);
+
+                const mid = userGroup.position.clone().lerp(target.group.position, 0.5);
+                mid.y += is2D ? 0.5 : 20;
+                const curve = new THREE.QuadraticBezierCurve3(userGroup.position.clone(), mid, target.group.position.clone());
+                const geo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(28));
+                const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 1.0 });
+                const line = new THREE.Line(geo, mat);
+                scene.add(line);
+                beams.push({ line, mat, life: 1.0 });
+
+                const mesh = target.group.children[0];
+                if (mesh && mesh.material) {
+                    mesh.material.color.setHex(0x00f3ff);
+                    target.group.scale.set(1.5, 1.5, 1.5);
+                    setTimeout(() => {
+                        target.group.scale.set(1, 1, 1);
+                        mesh.material.color.setHex(mesh.userData.origColor);
+                    }, 500);
+                }
+
+                const logBox = $('radar-log');
+                const item = document.createElement('div');
+                item.className = 'radar-log-item';
+                item.innerHTML = `<span class="log-user">${esc(ev.usuario)}</span> • <span class="log-action">${esc(ev.acao)}</span><br><small style="color:#94a3b8">${esc(ev.caminho)}</small>`;
+                item.onclick = () => {
+                    const p = ev.caminho.split('/').filter(Boolean);
+                    if (p.length >= 2 && p[0] === 'dados') {
+                        $('radar-sector').value = p[1];
+                        currentSector = p[1];
+                        loadDirectories();
+                    }
+                };
+                logBox.prepend(item);
+                while (logBox.children.length > 10) logBox.lastChild.remove();
+            }
+
+            function applyCameraMode() {
+                const btn = $('radar-toggle-view');
+                if (is2D) {
+                    btn.innerText = 'Mudar p/ 3D';
+                    camera.position.set(0, 260, 0.01);
+                    controls.target.set(0, 0, 0);
+                    controls.enableRotate = false;
+                    controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+                } else {
+                    btn.innerText = 'Mudar p/ 2D';
+                    camera.position.set(0, 140, 190);
+                    controls.target.set(0, 0, 0);
+                    controls.enableRotate = true;
+                    controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+                }
+                controls.update();
+                recalculateTreeLayout();
+            }
+
+            async function loadDirectories() {
+                clearGraph();
+                try {
+                    const data = await getJSON('/api/radar/dirs?setor=' + encodeURIComponent(currentSector), 15000);
+                    const select = $('radar-sector');
+                    if (select.options.length === 1 && data.setores) {
+                        data.setores.forEach(s => {
+                            const opt = document.createElement('option');
+                            opt.value = s; opt.textContent = s;
+                            select.appendChild(opt);
+                        });
+                        select.value = currentSector;
+                    }
+                    (data.caminhos || []).forEach(p => ensureFolderPath(p, true));
+                } catch (e) { console.error('Erro ao carregar diretórios:', e); }
+                recalculateTreeLayout();
+            }
+
+            async function poll(myGen) {
+                if (myGen !== gen) return;
+                try {
+                    const data = await getJSON('/api/radar/events?after_id=' + lastEventId, 8000);
+                    if (myGen !== gen) return;
+                    if (data.last_id) lastEventId = data.last_id;
+                    if (data.events && data.events.length) data.events.forEach(triggerActivity);
+                } catch (e) { /* tenta de novo no próximo ciclo */ }
+                if (myGen === gen) pollTimer = setTimeout(() => poll(myGen), 1000);
+            }
+
+            function resize() {
+                if (!renderer || !stage) return;
+                const w = stage.clientWidth, h = stage.clientHeight;
+                if (!w || !h) return;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            }
+
+            function animate() {
+                raf = requestAnimationFrame(animate);
+                for (let i = beams.length - 1; i >= 0; i--) {
+                    const b = beams[i];
+                    b.life -= 0.016;
+                    if (b.life <= 0) {
+                        scene.remove(b.line); b.line.geometry.dispose(); b.mat.dispose();
+                        beams.splice(i, 1);
+                    } else {
+                        b.mat.opacity = b.life;
+                    }
+                }
+                controls.update();
+                renderer.render(scene, camera);
+            }
+
+            function initScene() {
+                stage = $('radar-stage');
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(48, 1, 1, 3000);
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setClearColor(0x050811, 1);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                stage.appendChild(renderer.domElement);
+
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.08;
+
+                scene.add(new THREE.AmbientLight(0xffffff, 0.95));
+                const dl = new THREE.DirectionalLight(0xffffff, 0.5);
+                dl.position.set(50, 150, 50);
+                scene.add(dl);
+
+                RING.slice(1).forEach((r, idx) => {
+                    const geo = new THREE.RingGeometry(r - 0.2, r + 0.2, 128);
+                    geo.rotateX(-Math.PI / 2);
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: idx === 3 ? 0xec4899 : 0x1e293b, side: THREE.DoubleSide,
+                        transparent: true, opacity: idx === 3 ? 0.25 : 0.55
+                    });
+                    scene.add(new THREE.Mesh(geo, mat));
+                });
+
+                clearGraph();
+
+                $('radar-toggle-view').addEventListener('click', () => { is2D = !is2D; applyCameraMode(); });
+                $('radar-sector').addEventListener('change', e => { currentSector = e.target.value; loadDirectories(); });
+                $('radar-depth').addEventListener('change', e => { maxDepth = parseInt(e.target.value, 10); loadDirectories(); });
+
+                if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+                window.addEventListener('resize', resize);
+                resize();
+                ready = true;
+            }
+
+            async function open() {
+                active = true;
+                const myGen = ++gen;
+                showMsg('');
+                try {
+                    await ensureLibs();
+                    if (!ready) initScene();
+                } catch (e) {
+                    console.error(e);
+                    active = false;
+                    showMsg('Não foi possível iniciar o Conectograma (bibliotecas 3D ou WebGL indisponíveis neste navegador).');
+                    return;
+                }
+                if (!active || myGen !== gen) return;
+
+                resize();
+                await loadDirectories();
+                applyCameraMode();
+                if (!active || myGen !== gen) return;
+
+                lastEventId = 0;
+                cancelAnimationFrame(raf);
+                clearTimeout(pollTimer);
+                animate();
+                poll(myGen);
+            }
+
+            function close() {
+                active = false;
+                gen++;
+                cancelAnimationFrame(raf);
+                clearTimeout(pollTimer);
+            }
+
+            return { open, close };
+        })();
+
+        /* ================= Navegação entre abas ================= */
+        const TABS = ['dashboard', 'radar', 'history', 'about'];
+        const TAB_INFO = {
+            dashboard: ['Dashboard em Tempo Real', 'Visão geral dos acessos ao compartilhamento'],
+            radar: ['Conectograma', 'Atividade dos usuários nas pastas, em tempo real'],
+            history: ['Histórico e Busca Avançada', 'Consulte eventos e gere o relatório de auditoria'],
+            about: ['Sobre o Sistema', 'Samba Audit · Tamar Works']
+        };
+
+        let liveTimer;
+        let isInitialLoad = true;
+        let tabToken = 0;
+
+        async function switchTab(tab) {
+            const token = ++tabToken;
+            clearInterval(liveTimer);
+            if (tab !== 'radar') Radar.close();
+
+            TABS.forEach(t => {
+                $(`view-${t}`).classList.add('hidden');
+                $(`btn-${t}`).classList.remove('active');
+            });
+            $(`view-${tab}`).classList.remove('hidden');
+            $(`btn-${tab}`).classList.add('active');
+            $('page-title').innerText = TAB_INFO[tab][0];
+            $('page-sub').innerText = TAB_INFO[tab][1];
+
+            if (tab === 'dashboard') {
+                // Nunca deixa a tela de carregamento presa se a API demorar
+                await Promise.race([loadDashboard(), new Promise(r => setTimeout(r, 5000))]);
+                Object.values(charts).forEach(c => c.resize());
+                if (token === tabToken) liveTimer = setInterval(loadDashboard, 10000);
+            } else if (tab === 'history') {
+                await loadHistory();
+            } else if (tab === 'radar') {
+                await Radar.open();
+            }
 
             if (isInitialLoad) {
+                const loader = $('loader');
                 loader.style.opacity = '0';
                 setTimeout(() => { loader.style.display = 'none'; }, 500);
                 isInitialLoad = false;
