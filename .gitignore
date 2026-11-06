@@ -8,3 +8,8 @@ __pycache__/
 
 # Ignorar logs
 *.log
+*.db-shm
+*.db-wal
+*.bkp
+*.antes-patch
+.env
